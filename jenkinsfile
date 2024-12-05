@@ -6,9 +6,6 @@ pipeline {
         string(name: 'PROJECT_ID', defaultValue: 'mypro-443507', description: 'The GCP project ID')
         string(name: 'GIT_BRANCH', defaultValue: 'main', description: 'The GitHub branch to build') 
     }
-    environment {
-        DOCKER_IMAGE_TAG = "aniljeenapati/demo1:${env.BUILD_NUMBER ?: 'latest'}"
-    }
     stages {
         stage('Git Checkout') {
             steps {
@@ -37,11 +34,6 @@ pipeline {
                     sh 'kubectl apply -f deploy.yaml'
                 }
             }
-        }
-    }
-    post {
-        always {
-            cleanWs()
         }
     }
 }
