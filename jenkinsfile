@@ -1,38 +1,53 @@
 pipeline {
-  agent any
+    agent any
 
-  // Define hardcoded values (replace with your actual values)
-  def clusterName = 'my-cluster1'
-  def zone = 'us-west3'
-  def projectId = 'mypro-443507'
-  def gitBranch = 'main'
+    environment {
+        // Define values as environment variables for better maintainability
+        CLUSTER_NAME = 'my-cluster1'
+        ZONE = 'us-west3'
+        PROJECT_ID = 'mypro-443507'
+        GIT_BRANCH = 'main'
+    }
 
-  stages {
-    stage('Git Checkout') {
-      steps {
-        git url: 'https://github.com/sgandeplli/python.git', branch: gitBranch
-      }
-    }
-    stage('Terraform Init') {
-      steps {
-        sh 'terraform init'
-      }
-    }
-    stage('Terraform Apply') {
-      steps {
-        withCredentials([file(credentialsId: 'gcp-sa', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
-          sh 'terraform apply -auto-approve'
+    stages {
+        stage('Git Checkout') {
+            steps {
+                // Checkout the repository using the defined branch
+                git url: 'https://github.com/sgandeplli/python.git', branch: "${GIT_BRANCH}"
+            }
         }
-      }
-    }
-    stage('Deploy to GKE') {
-      steps {
-        withCredentials([file(credentialsId: 'gcp-sa', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
-          sh 'gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS'
-          sh "gcloud container clusters get-credentials $clusterName --zone $zone --project $projectId"
-          sh 'kubectl apply -f deploy.yaml'
+        stage('Terraform Init') {
+            steps {
+                // Initialize Terraform
+                sh 'terraform init'
+            }
         }
-      }
+        stage('Terraform Apply') {
+            steps {
+                // Authenticate and apply Terraform changes
+                withCredentials([file(credentialsId: 'gcp-sa', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                    sh 'terraform apply -auto-approve'
+                }
+            }
+        }
+        stage('Deploy to GKE') {
+            steps {
+                // Authenticate and deploy to GKE
+                withCredentials([file(credentialsId: 'gcp-sa', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                    script {
+                        sh 'gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS'
+                        sh "gcloud container clusters get-credentials ${CLUSTER_NAME} --zone ${ZONE} --project ${PROJECT_ID}"
+                        sh 'kubectl apply -f deploy.yaml'
+                    }
+                }
+            }
+        }
     }
-  }
+
+    post {
+        always {
+            // Clean up workspace to save space and avoid conflicts
+            cleanWs()
+        }
+    }
 }
