@@ -12,7 +12,7 @@ pipeline {
     stages {
         stage('Git Checkout') {
             steps {
-                git url: 'https://github.com/aniljeenapati/project1.git', branch: params.GIT_BRANCH
+                git url: 'https://github.com/sgandeplli/python.git', branch: params.GIT_BRANCH
             }
         }
         stage('Build Docker Image') {
