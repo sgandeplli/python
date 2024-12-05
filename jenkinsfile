@@ -15,21 +15,6 @@ pipeline {
                 git url: 'https://github.com/sgandeplli/python.git', branch: params.GIT_BRANCH
             }
         }
-        stage('Build Docker Image') {
-            steps {
-                sh "docker build -t ${DOCKER_IMAGE_TAG} ."
-            }
-        }
-        stage('Push Docker Image') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'jenkins-docker', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-                    sh """
-                    echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-                    docker push ${DOCKER_IMAGE_TAG}
-                    """
-                }
-            }
-        }
         stage('Terraform Init') {
             steps {
                 sh 'terraform init'
