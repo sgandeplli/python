@@ -2,7 +2,7 @@ pipeline {
     agent any
     parameters {
         string(name: 'CLUSTER_NAME', defaultValue: 'my-cluster1', description: 'The GKE cluster name')
-        string(name: 'ZONE', defaultValue: 'us-central1', description: 'The GCP zone')
+        string(name: 'ZONE', defaultValue: 'us-west3', description: 'The GCP zone')
         string(name: 'PROJECT_ID', defaultValue: 'mypro-443507', description: 'The GCP project ID')
         string(name: 'GIT_BRANCH', defaultValue: 'main', description: 'The GitHub branch to build') 
     }
