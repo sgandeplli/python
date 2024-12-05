@@ -1,39 +1,38 @@
 pipeline {
-    agent any
-    parameters {
-        string(name: 'CLUSTER_NAME', defaultValue: 'my-cluster1', description: 'The GKE cluster name')
-        string(name: 'ZONE', defaultValue: 'us-west3', description: 'The GCP zone')
-        string(name: 'PROJECT_ID', defaultValue: 'mypro-443507', description: 'The GCP project ID')
-        string(name: 'GIT_BRANCH', defaultValue: 'main', description: 'The GitHub branch to build') 
-    }
-    stages {
-        stage('Git Checkout') {
-            steps {
-                git url: 'https://github.com/sgandeplli/python.git', branch: params.GIT_BRANCH
-            }
-        }
-        stage('Terraform Init') {
-            steps {
-                sh 'terraform init'
-            }
-        }
-        stage('Terraform Apply') {
-            steps {
-                withCredentials([file(credentialsId: 'gcp-sa', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
-                    sh 'terraform apply -auto-approve'
-                }
-            }
-        }
-        stage('Deploy to GKE') {
-            steps {
-                withCredentials([file(credentialsId: 'gcp-sa', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
-                    sh 'gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS'
-                    sh "gcloud container clusters get-credentials ${params.CLUSTER_NAME} --zone ${params.ZONE} --project ${params.PROJECT_ID}"
+  agent any
 
-                    // Create or update Kubernetes deployment
-                    sh 'kubectl apply -f deploy.yaml'
-                }
-            }
-        }
+  // Define hardcoded values (replace with your actual values)
+  def clusterName = 'my-cluster1'
+  def zone = 'us-west3'
+  def projectId = 'mypro-443507'
+  def gitBranch = 'main'
+
+  stages {
+    stage('Git Checkout') {
+      steps {
+        git url: 'https://github.com/sgandeplli/python.git', branch: gitBranch
+      }
     }
+    stage('Terraform Init') {
+      steps {
+        sh 'terraform init'
+      }
+    }
+    stage('Terraform Apply') {
+      steps {
+        withCredentials([file(credentialsId: 'gcp-sa', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+          sh 'terraform apply -auto-approve'
+        }
+      }
+    }
+    stage('Deploy to GKE') {
+      steps {
+        withCredentials([file(credentialsId: 'gcp-sa', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+          sh 'gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS'
+          sh "gcloud container clusters get-credentials $clusterName --zone $zone --project $projectId"
+          sh 'kubectl apply -f deploy.yaml'
+        }
+      }
+    }
+  }
 }
