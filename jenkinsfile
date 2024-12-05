@@ -1,0 +1,62 @@
+pipeline {
+    agent any
+    parameters {
+        string(name: 'CLUSTER_NAME', defaultValue: 'my-cluster1', description: 'The GKE cluster name')
+        string(name: 'ZONE', defaultValue: 'us-central1', description: 'The GCP zone')
+        string(name: 'PROJECT_ID', defaultValue: 'kube-435112', description: 'The GCP project ID')
+        string(name: 'GIT_BRANCH', defaultValue: 'main', description: 'The GitHub branch to build') 
+    }
+    environment {
+        DOCKER_IMAGE_TAG = "aniljeenapati/demo1:${env.BUILD_NUMBER ?: 'latest'}"
+    }
+    stages {
+        stage('Git Checkout') {
+            steps {
+                git url: 'https://github.com/aniljeenapati/project1.git', branch: params.GIT_BRANCH
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t ${DOCKER_IMAGE_TAG} ."
+            }
+        }
+        stage('Push Docker Image') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'jenkins-docker', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                    sh """
+                    echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+                    docker push ${DOCKER_IMAGE_TAG}
+                    """
+                }
+            }
+        }
+        stage('Terraform Init') {
+            steps {
+                sh 'terraform init'
+            }
+        }
+        stage('Terraform Apply') {
+            steps {
+                withCredentials([file(credentialsId: 'gcp-sa', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                    sh 'terraform apply -auto-approve'
+                }
+            }
+        }
+        stage('Deploy to GKE') {
+            steps {
+                withCredentials([file(credentialsId: 'gcp-sa', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                    sh 'gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS'
+                    sh "gcloud container clusters get-credentials ${params.CLUSTER_NAME} --zone ${params.ZONE} --project ${params.PROJECT_ID}"
+
+                    // Create or update Kubernetes deployment
+                    sh 'kubectl apply -f deploy.yaml'
+                }
+            }
+        }
+    }
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}
