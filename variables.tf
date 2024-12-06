@@ -1,7 +1,7 @@
 variable "project_id" {
   description = "The GCP project ID"
   type        = string
-  default     = "mypro-443507"  
+  default     = "python-visit"  
 }
 
 variable "region" {
